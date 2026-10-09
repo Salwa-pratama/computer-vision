@@ -1,0 +1,6 @@
+services:
+  computer-vision:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    image: computer-vision
