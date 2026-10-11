@@ -4,6 +4,8 @@ services:
       context: ..
       dockerfile: .devcontainer/Dockerfile
     image: computer-vision
+    devices:
+      - "/dev/video0:/dev/video0"
     container_name: computer-vision
     command: sleep infinity
     working_dir: /app

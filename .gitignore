@@ -1,3 +1,2 @@
-*.caffemodel
-*.prototxt
 .env
+model

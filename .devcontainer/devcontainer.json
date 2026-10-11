@@ -3,6 +3,8 @@
   "dockerComposeFile": "compose.yaml",
   "service": "computer_vision_app",
   "workspaceFolder": "/app",
+
+
   "customizations": {
     "vscode": {
       "extensions": ["ms-python.python", "ms-python.vscode-pylance"],
