@@ -1,2 +1,6 @@
 pandas
-
+matplotlib
+ipykernel
+opencv-python-headless<5.0
+flask
+mediapipe
