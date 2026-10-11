@@ -4,15 +4,19 @@ import numpy as np
 
 app = Flask(__name__)
 
-# 1. Ini merupakan daftar objek yang bisa dideteksi oleh Mobilenet-SSD
-CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
-           "bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
-           "dog", "horse", "motorbike", "person", "pottedplant", "sheep",
-           "sofa", "train", "tvmonitor"]
-
-# 2. Load model ke OpenCV
-net = cv2.dnn.readNetFromCaffe("MobileNetSSD_deploy.prototxt", "MobileNetSSD_deploy.caffemodel")
-
+# 1. Ganti array CLASSES jadi Dictionary khusus untuk alat belajar
+# Di dataset COCO: 1 = Orang, 73 = Laptop, 77 = HP, 84 = Buku
+COCO_LABELS = {
+    1: "Person (User)",
+    73: "Laptop",
+    77: "Cell Phone (Distraction!)",
+    84: "Book"
+}
+# 2. Load model versi TensorFlow (bukan Caffe lagi)
+net = cv2.dnn.readNetFromTensorflow(
+    "./model/ssd_mobilenet_v2_coco_2018_03_29/frozen_inference_graph.pb",
+    "./model/ssd_mobilenet_v2_coco_2018_03_29.pbtxt"
+)
 
 def generate_frames():
     camera = cv2.VideoCapture(0) # Gunakan 0 untuk webcam lokal
@@ -24,26 +28,31 @@ def generate_frames():
 
         # 3. Ubah ukuran frame agar ringan diproses (300x300 pixel)
         (h, w) = frame.shape[:2]
-        blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 0.007843, (300, 300), 127.5)
+        blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), swapRB=True, crop=False)
 
         # 4. Masukkan gambar ke model AI
         net.setInput(blob)
         detections = net.forward()
 
-        # 5. Gambar kotak untuk setiap objek yang terdeteksi
+       # 5. Gambar kotak HANYA untuk objek belajar & distraksi
         for i in np.arange(0, detections.shape[2]):
             confidence = detections[0, 0, i, 2]
 
-            # Hanya tampilkan jika AI yakin di atas 50%
-            if confidence > 0.5:
+            # Hanya tampilkan jika AI yakin di atas 40%
+            if confidence > 0.3:
                 idx = int(detections[0, 0, i, 1])
-                box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
-                (startX, startY, endX, endY) = box.astype("int")
 
-                label = f"{CLASSES[idx]}: {confidence * 100:.2f}%"
-                cv2.rectangle(frame, (startX, startY), (endX, endY), (0, 255, 0), 2)
-                cv2.putText(frame, label, (startX, startY - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                # Cek apakah objek yang terdeteksi ada di daftar asisten belajar kita
+                if idx in COCO_LABELS:
+                    box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+                    (startX, startY, endX, endY) = box.astype("int")
 
+                    # Buat warna kotak merah jika HP (distraksi), hijau jika lainnya
+                    color = (0, 0, 255) if idx == 77 else (0, 255, 0)
+
+                    label = f"{COCO_LABELS[idx]}: {confidence * 100:.2f}%"
+                    cv2.rectangle(frame, (startX, startY), (endX, endY), color, 2)
+                    cv2.putText(frame, label, (startX, startY - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
         # 6. Konversi gambar jadi format biner untuk dikirim ke HTML
         ret, buffer = cv2.imencode('.jpg', frame)
         frame = buffer.tobytes()
